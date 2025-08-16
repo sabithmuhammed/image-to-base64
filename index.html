@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Image to Base64 Converter (Client‑Side, Private)</title>
+        <meta
+            name="description"
+            content="Free online image to Base64 converter. 100% client‑side, no uploads. Drag & drop PNG, JPG, WebP and instantly get Base64 data URIs. Copy or download results."
+        />
+        <meta name="robots" content="index,follow" />
+        <style>
+            :root {
+                --bg: #0b1020;
+                --card: #121830;
+                --muted: #9aa3b2;
+                --accent: #5b8cff;
+                --ok: #22c55e;
+                --err: #ef4444;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica,
+                    Arial, sans-serif;
+                background: linear-gradient(
+                    180deg,
+                    #0b1020,
+                    #0b1020 40%,
+                    #0e1428
+                );
+                color: #e5e7eb;
+            }
+            header {
+                padding: 32px 16px;
+                text-align: center;
+            }
+            h1 {
+                margin: 0;
+                font-size: clamp(22px, 4vw, 32px);
+            }
+            .sub {
+                color: var(--muted);
+                margin-top: 8px;
+            }
+            .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 16px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            @media (min-width: 1000px) {
+                .grid {
+                    grid-template-columns: 360px 1fr;
+                }
+            }
+            .card {
+                background: var(--card);
+                border: 1px solid #1f2a44;
+                border-radius: 16px;
+                padding: 16px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            }
+            .drop {
+                border: 2px dashed #2b3760;
+                border-radius: 14px;
+                padding: 18px;
+                text-align: center;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+            .drop.drag {
+                border-color: var(--accent);
+                background: #0f1b3a;
+            }
+            .opts label {
+                display: block;
+                font-size: 14px;
+                color: var(--muted);
+                margin: 10px 0 6px;
+            }
+            .row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            input[type="number"],
+            select {
+                background: #0b1126;
+                border: 1px solid #1f2a44;
+                color: #e5e7eb;
+                border-radius: 10px;
+                padding: 8px 10px;
+                min-width: 90px;
+            }
+            input[type="checkbox"] {
+                transform: scale(1.1);
+            }
+            button {
+                background: var(--accent);
+                border: none;
+                color: white;
+                padding: 10px 14px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 600;
+            }
+            button.ghost {
+                background: #1b2544;
+                color: #c9d1e8;
+            }
+            button.warn {
+                background: var(--err);
+            }
+            .list {
+                display: grid;
+                gap: 12px;
+            }
+            .item {
+                border: 1px solid #223057;
+                border-radius: 12px;
+                padding: 12px;
+                display: grid;
+                grid-template-columns: 64px 1fr;
+                gap: 12px;
+                background: #0e1430;
+            }
+            .thumb {
+                width: 64px;
+                height: 64px;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid #26345d;
+            }
+            .meta {
+                font-size: 12px;
+                color: #aab3c8;
+            }
+            textarea {
+                width: 100%;
+                min-height: 120px;
+                background: #0b1126;
+                border: 1px solid #1f2a44;
+                color: #cfe3ff;
+                border-radius: 12px;
+                padding: 10px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+            }
+            .actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 8px;
+            }
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: #152047;
+                border: 1px solid #26345d;
+                font-size: 11px;
+                color: #c9d1e8;
+            }
+            footer {
+                padding: 30px 16px;
+                text-align: center;
+                color: #98a2b3;
+            }
+            .hint {
+                font-size: 12px;
+                color: #8aa0c8;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Image → Base64 Converter</h1>
+            <p class="sub">
+                100% client‑side. Your files never leave your device. Drag &
+                drop multiple images and copy Base64 instantly.
+            </p>
+        </header>
+        <div class="wrap">
+            <div class="grid">
+                <div class="card">
+                    <div
+                        id="drop"
+                        class="drop"
+                        tabindex="0"
+                        role="button"
+                        aria-label="Upload images by clicking or dragging here"
+                    >
+                        <input
+                            id="file"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            hidden
+                        />
+                        <p>
+                            <strong>Click to select</strong> or
+                            <strong>drag & drop</strong> PNG, JPG, WebP…
+                        </p>
+                        <p class="hint">
+                            Tip: You can also paste an image from clipboard
+                            (Ctrl/Cmd + V)
+                        </p>
+                    </div>
+                    <div class="opts" style="margin-top: 16px">
+                        <label>Output format</label>
+                        <div class="row">
+                            <select id="format">
+                                <option value="keep">Keep original</option>
+                                <option value="image/png">PNG</option>
+                                <option value="image/jpeg">JPEG</option>
+                                <option value="image/webp">WebP</option>
+                            </select>
+                            <label style="margin-left: 8px"
+                                >JPEG/WebP quality</label
+                            >
+                            <input
+                                id="quality"
+                                type="number"
+                                min="1"
+                                max="100"
+                                value="92"
+                            />
+                        </div>
+                        <div class="row" style="margin-top: 8px">
+                            <label
+                                ><input id="strip" type="checkbox" checked />
+                                Strip EXIF/metadata</label
+                            >
+                            <label
+                                ><input id="onlyb64" type="checkbox" /> Show
+                                Base64 only (no data: prefix)</label
+                            >
+                        </div>
+                        <div class="row" style="margin-top: 8px">
+                            <label>Max edge (px)</label>
+                            <input
+                                id="maxEdge"
+                                type="number"
+                                min="1"
+                                value="4096"
+                            />
+                            <span class="hint"
+                                >(Images larger than this are downscaled to save
+                                size)</span
+                            >
+                        </div>
+                        <div class="row" style="margin-top: 12px">
+                            <button id="clear" class="ghost" type="button">
+                                Clear list
+                            </button>
+                            <button id="downloadAll" type="button">
+                                Download all as .txt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div
+                        id="list"
+                        class="list"
+                        aria-live="polite"
+                        aria-busy="false"
+                    ></div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <div class="hint">
+                Privacy: All conversions happen in your browser using FileReader
+                and Canvas APIs.
+            </div>
+        </footer>
+
+        <script>
+            (() => {
+                const $ = (id) => document.getElementById(id);
+                const fileInput = $("file");
+                const drop = $("drop");
+                const list = $("list");
+                const formatSel = $("format");
+                const qualityInput = $("quality");
+                const strip = $("strip");
+                const onlyb64 = $("onlyb64");
+                const maxEdge = $("maxEdge");
+                const clearBtn = $("clear");
+                const downloadAllBtn = $("downloadAll");
+
+                let items = []; // { id, name, type, size, dataUrl, base64, width, height }
+
+                const human = (n) => {
+                    const u = ["B", "KB", "MB", "GB"];
+                    let i = 0,
+                        x = n;
+                    while (x >= 1024 && i < u.length - 1) {
+                        x /= 1024;
+                        i++;
+                    }
+                    return x.toFixed(i === 0 ? 0 : 2) + " " + u[i];
+                };
+
+                function readFile(file) {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onerror = () => reject(new Error("Read failed"));
+                        reader.onload = () =>
+                            resolve({
+                                name: file.name,
+                                type: file.type,
+                                size: file.size,
+                                buf: reader.result,
+                            });
+                        reader.readAsDataURL(file); // data URL directly for non-canvas path too
+                    });
+                }
+
+                async function toCanvasDataURL(dataURL, opts) {
+                    // opts: { outType, quality (0..1), maxEdgePx, stripMeta }
+                    const img = new Image();
+                    img.decoding = "async";
+                    img.src = dataURL;
+                    await img.decode();
+
+                    // Resize if needed
+                    let { width, height } = img;
+                    const ME = Math.max(
+                        1,
+                        parseInt(opts.maxEdgePx || 4096, 10)
+                    );
+                    if (Math.max(width, height) > ME) {
+                        const ratio = ME / Math.max(width, height);
+                        width = Math.round(width * ratio);
+                        height = Math.round(height * ratio);
+                    }
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    let outType = opts.outType;
+                    if (outType === "keep") {
+                        // keep original mime from dataURL header
+                        const m = /^data:([^;]+);/.exec(dataURL);
+                        outType = m ? m[1] : "image/png";
+                    }
+
+                    let q = 0.92;
+                    if (opts.quality) {
+                        const n = Math.max(
+                            1,
+                            Math.min(100, parseInt(opts.quality, 10))
+                        );
+                        q = n / 100;
+                    }
+
+                    // Strip metadata: Canvas re-encoding already drops EXIF for JPEG/WEBP/PNG
+                    const out = canvas.toDataURL(outType || "image/png", q);
+                    return { dataUrl: out, width, height };
+                }
+
+                function base64FromDataURL(dataURL, only) {
+                    const comma = dataURL.indexOf(",");
+                    return only ? dataURL.slice(comma + 1) : dataURL;
+                }
+
+                function render() {
+                    list.innerHTML = "";
+                    if (items.length === 0) {
+                        list.innerHTML =
+                            '<div class="hint">No files yet. Add images to see results here.</div>';
+                        return;
+                    }
+                    items.forEach((it) => {
+                        const div = document.createElement("div");
+                        div.className = "item";
+                        div.innerHTML = `
+        <img class="thumb" alt="preview" src="${it.dataUrl}"/>
+        <div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <strong>${it.name}</strong>
+            <span class="badge">${it.type || "unknown"}</span>
+            <span class="badge">${human(it.size)}</span>
+            <span class="badge">${it.width}×${it.height}px</span>
+          </div>
+          <textarea readonly>${
+              onlyb64.checked ? it.base64 : it.dataUrl
+          }</textarea>
+          <div class="actions">
+            <button data-act="copy" data-id="${it.id}">Copy</button>
+            <button class="ghost" data-act="save" data-id="${
+                it.id
+            }">Save .txt</button>
+            <button class="warn" data-act="remove" data-id="${
+                it.id
+            }">Remove</button>
+          </div>
+        </div>`;
+                        list.appendChild(div);
+                    });
+                }
+
+                async function handleFiles(fileList) {
+                    const outType = formatSel.value; // keep / mime
+                    const quality = qualityInput.value;
+                    const maxEdgePx = maxEdge.value;
+                    const promises = [...fileList].map(async (file) => {
+                        if (!file.type.startsWith("image/")) return null;
+                        const raw = await readFile(file);
+                        const { dataUrl, width, height } =
+                            await toCanvasDataURL(raw.buf, {
+                                outType,
+                                quality,
+                                maxEdgePx,
+                                stripMeta: strip.checked,
+                            });
+                        const b64 = base64FromDataURL(dataUrl, true);
+                        return {
+                            id: crypto.randomUUID(),
+                            name: file.name,
+                            type: outType === "keep" ? file.type : outType,
+                            size: dataURLByteSize(dataUrl),
+                            dataUrl,
+                            base64: b64,
+                            width,
+                            height,
+                        };
+                    });
+                    const results = (await Promise.all(promises)).filter(
+                        Boolean
+                    );
+                    items = items.concat(results);
+                    render();
+                }
+
+                function dataURLByteSize(dataUrl) {
+                    // Rough size after re-encode; strip header and compute bytes
+                    const base64 = dataUrl.split(",")[1] || "";
+                    const padding = (base64.match(/=*$/) || [""])[0].length;
+                    const inLen = base64.length;
+                    return Math.floor((inLen * 3) / 4) - padding;
+                }
+
+                // Events
+                drop.addEventListener("click", () => fileInput.click());
+                drop.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    drop.classList.add("drag");
+                });
+                drop.addEventListener("dragleave", () =>
+                    drop.classList.remove("drag")
+                );
+                drop.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    drop.classList.remove("drag");
+                    handleFiles(e.dataTransfer.files);
+                });
+                fileInput.addEventListener("change", () =>
+                    handleFiles(fileInput.files)
+                );
+
+                // Paste support
+                window.addEventListener("paste", (e) => {
+                    const files = [];
+                    if (e.clipboardData) {
+                        for (const item of e.clipboardData.items) {
+                            if (item.type && item.type.startsWith("image/")) {
+                                files.push(item.getAsFile());
+                            }
+                        }
+                        if (files.length) handleFiles(files);
+                    }
+                });
+
+                // Option changes re-render textareas (format toggle only impacts new conversions)
+                onlyb64.addEventListener("change", () => render());
+
+                // Clear
+                clearBtn.addEventListener("click", () => {
+                    items = [];
+                    render();
+                });
+
+                // Delegated actions (copy/save/remove)
+                list.addEventListener("click", async (e) => {
+                    const btn = e.target.closest("button");
+                    if (!btn) return;
+                    const id = btn.getAttribute("data-id");
+                    const act = btn.getAttribute("data-act");
+                    const it = items.find((x) => x.id === id);
+                    if (!it) return;
+                    if (act === "copy") {
+                        try {
+                            await navigator.clipboard.writeText(
+                                onlyb64.checked ? it.base64 : it.dataUrl
+                            );
+                            btn.textContent = "Copied!";
+                            setTimeout(() => (btn.textContent = "Copy"), 1200);
+                        } catch {
+                            alert("Copy failed. Select text manually.");
+                        }
+                    } else if (act === "save") {
+                        const blob = new Blob(
+                            [onlyb64.checked ? it.base64 : it.dataUrl],
+                            { type: "text/plain" }
+                        );
+                        const a = document.createElement("a");
+                        a.href = URL.createObjectURL(blob);
+                        a.download =
+                            it.name.replace(/\.[^.]+$/, "") +
+                            (onlyb64.checked ? "_base64.txt" : "_datauri.txt");
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                    } else if (act === "remove") {
+                        items = items.filter((x) => x.id !== id);
+                        render();
+                    }
+                });
+
+                // Bulk download
+                downloadAllBtn.addEventListener("click", () => {
+                    if (items.length === 0)
+                        return alert("Nothing to download.");
+                    const lines = items.map(
+                        (it) =>
+                            `# ${it.name} (${it.type}, ${it.width}x${
+                                it.height
+                            })\n${onlyb64.checked ? it.base64 : it.dataUrl}\n`
+                    );
+                    const blob = new Blob([lines.join("\n")], {
+                        type: "text/plain",
+                    });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "base64-results.txt";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+                });
+            })();
+        </script>
+    </body>
+</html>
